@@ -39,7 +39,7 @@ git diff --stat ; git diff           # 커밋 전에 읽기
 git add -A && git commit -m "종류: 무엇을 - 무엇으로 확인했나"
 git log --oneline -10
 git restore 파일                      # 커밋 안 한 변경 되돌리기
-git checkout $(cat notes/provided_commit.txt) -- 파일   # 제공 파일 원래대로
+git checkout $(cat notes/kit/provided_commit.txt) -- 파일   # 제공 파일 원래대로
 ```
 
 ## 서버와 미리보기 (0.0.0.0 필수)

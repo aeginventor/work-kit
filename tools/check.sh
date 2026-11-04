@@ -42,19 +42,19 @@ fi
 is_deliverable() { local x; for x in "${deliverables[@]+"${deliverables[@]}"}"; do [ "$x" = "$1" ] && return 0; done; return 1; }
 
 # 1. 처음 받은 파일이 그대로인가 (제출물 목록에 있는 파일은 제외)
-if [ -s notes/provided.txt ] && [ -s notes/provided_commit.txt ]; then
-  base="$(cat notes/provided_commit.txt)"
+if [ -s notes/kit/provided.txt ] && [ -s notes/kit/provided_commit.txt ]; then
+  base="$(cat notes/kit/provided_commit.txt)"
   changed=()
   while IFS= read -r f; do
     [ -z "$f" ] && continue
     is_deliverable "$f" && continue
     if [ ! -e "$f" ]; then changed+=("$f(삭제됨)")
     elif ! git diff --quiet "$base" -- "$f" 2>/dev/null; then changed+=("$f"); fi
-  done < notes/provided.txt
-  if [ ${#changed[@]} -eq 0 ]; then ok "제공 파일 그대로 ($(wc -l < notes/provided.txt | tr -d ' ')개)"
+  done < notes/kit/provided.txt
+  if [ ${#changed[@]} -eq 0 ]; then ok "제공 파일 그대로 ($(wc -l < notes/kit/provided.txt | tr -d ' ')개)"
   else bad "제공 파일이 바뀜: ${changed[*]:0:5}  (되돌리기: git checkout $base -- 파일)"; fi
 else
-  wn "notes/provided.txt 없음. setup.sh를 돌렸는지 확인"
+  wn "notes/kit/provided.txt 없음. setup.sh를 돌렸는지 확인"
 fi
 
 # 2. 제출물이 있는가 (notes/deliverables.txt: 한 줄에 파일 하나)
@@ -150,7 +150,7 @@ echo
 echo "==== check ($mode)  PASS $pass / WARN $warn / FAIL $fail"
 printf '%s\n' "${lines[@]}"
 
-mkdir -p notes
-echo "$(date '+%Y-%m-%d %H:%M') $mode PASS $pass WARN $warn FAIL $fail $(git rev-parse --short HEAD 2>/dev/null)" >> notes/check_log.txt
+mkdir -p notes/kit
+echo "$(date '+%Y-%m-%d %H:%M') $mode PASS $pass WARN $warn FAIL $fail $(git rev-parse --short HEAD 2>/dev/null)" >> notes/kit/check_log.txt
 
 [ "$fail" -eq 0 ]

@@ -63,15 +63,15 @@ else
   say "기존 커밋이 있어서 초기 커밋은 건너뜀"
 fi
 
-mkdir -p notes
+mkdir -p notes notes/kit
 
 # 처음 받은 파일 목록 (check.sh가 이 파일들이 바뀌지 않았는지 본다)
-if [ ! -s notes/provided.txt ]; then
+if [ ! -s notes/kit/provided.txt ]; then
   first="$(git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1)"
   if [ -n "$first" ]; then
-    git -c core.quotepath=false ls-tree -r --name-only "$first" | grep -v -x 'AGENTS.md' > notes/provided.txt
-    echo "$first" > notes/provided_commit.txt
-    say "제공 파일 $(wc -l < notes/provided.txt | tr -d ' ')개를 notes/provided.txt에 기록했어"
+    git -c core.quotepath=false ls-tree -r --name-only "$first" | grep -v -x 'AGENTS.md' > notes/kit/provided.txt
+    echo "$first" > notes/kit/provided_commit.txt
+    say "제공 파일 $(wc -l < notes/kit/provided.txt | tr -d ' ')개를 notes/kit/provided.txt에 기록했어"
   fi
 fi
 
@@ -82,9 +82,10 @@ fi
 
 # 4. AGENTS.md: 시험 원본은 보존하고 내 규칙으로 교체
 if [ -e AGENTS.md ] && ! grep -q '<!-- work-kit -->' AGENTS.md; then
-  if [ ! -e notes/AGENTS.exam.md ]; then
-    cp AGENTS.md notes/AGENTS.exam.md
-    say "시험이 준 AGENTS.md를 notes/AGENTS.exam.md로 보존했어. 30초만 훑어봐: cat notes/AGENTS.exam.md"
+  if [ ! -e notes/from-exam/AGENTS.md ]; then
+    mkdir -p notes/from-exam
+    cp AGENTS.md notes/from-exam/AGENTS.md
+    say "시험이 준 AGENTS.md를 notes/from-exam/AGENTS.md로 보존했어. 30초만 훑어봐: cat notes/from-exam/AGENTS.md"
   fi
   cp "$kit_dir/AGENTS.md" AGENTS.md
   say "AGENTS.md를 내 작업 규칙으로 바꿨어"

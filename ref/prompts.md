@@ -42,6 +42,17 @@
 - 중간 보고: `중간 보고드립니다. 된 것: / 확인한 방법과 결과: / 남은 것: / 우선순위가 바뀐 게 있으면 알려주세요`
 - 최종 보고: `완료 보고드립니다. 해결된 것: / 확인 방법과 결과: / 제외한 것과 이유: / 남은 위험:`
 
+## 담당자에게 (English)
+
+- First: `Hi, I'm San and I'm working on this task. Before building, I'd like to make sure I understand the business meaning correctly. (question 1-2)`
+- Batch: `I've listed a few more things to confirm. 1. ... 2. ...`
+- Meaning: `In the data, A and B sometimes differ. Which one should be the reference for the business?`
+- Criteria: `How much worse can X get before it becomes a problem? Is there a set threshold?`
+- Priority: `When A and B conflict, which one should come first?`
+- Failure: `If X fails, what should happen?`
+- Choice: `When X happens, is A or B correct?`
+- Report: `Quick update: done / how I checked / remaining. Let me know if priorities have changed.`
+
 ## 쓰지 않는 말
 
 - 과제 README를 통째로 붙이고 "이거 다 만들어줘"

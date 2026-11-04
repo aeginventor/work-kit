@@ -16,7 +16,7 @@ git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
 
 ## 기억할 다섯 줄 (clone이 안 돼도 이것만은)
 
-1. 과제 문서를 내가 직접 읽고, 요구에 R 번호를 붙인다. 담당자에게는 업무 의미만 작은 질문으로
+1. 과제 문서를 내가 직접 읽고, 요구에 R 번호를 붙인다. 담당자 확인 항목은 표로 빠짐없이, 묻는 동안 구현은 병행
 2. 무거운 결정은 Codex가 선택지로 묻고 내가 이유와 함께 고른다. 결정 카드로 남긴다
 3. 한 번에 한 단위. 끝날 때마다 diff를 보고, 기대값 한 줄을 판단하고, 내 말로 커밋 메시지
 4. AI 설명이 아니라 실행 결과로 믿는다. 요구마다 검증, 핵심 요구는 일부러 깨 본다
@@ -29,7 +29,7 @@ git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
 | steps/01~05 | 모든 과제 공통: 시작, 읽기, 데이터, 질문, 계획 |
 | steps/06_*.md | 과제 유형에 맞는 파일 하나만 (02에서 정함) |
 | steps/07~09 | 모든 과제 공통: 검증, 문서, 제출과 서술형 |
-| ref/ | 막혔을 때만: 프롬프트, 키보드, 명령어, 배포 점검, 스택, 채점 기준 |
+| ref/ | 필요할 때: 과제 성격별 첫 수(patterns), 어려운 핵심 로직(algorithm), 프롬프트, 키보드, 명령어, 배포 점검, 스택, 채점 기준 |
 | tools/check.sh | 단위가 끝날 때마다: `bash work-kit/tools/check.sh` (제출 전엔 `full`) |
 | tools/profile_csv.py | 데이터가 있을 때: `python3 work-kit/tools/profile_csv.py 데이터폴더` |
 | AGENTS.md, templates/ | setup.sh가 작업공간으로 복사하는 원본 |
@@ -40,13 +40,13 @@ git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
 2. git이 없으면 만들고, 홈 디렉터리 환경 파일(.bashrc 같은 숨김 파일)과 work-kit/을 git에서 뺀다.
 3. 처음 받은 상태를 커밋하고, 그 파일 목록을 notes/kit/provided.txt에 남긴다. check.sh가 이 파일들이 바뀌지 않았는지 본다.
 4. 시험이 준 AGENTS.md가 있으면 notes/from-exam/AGENTS.md로 보존한 뒤 내 AGENTS.md로 바꾼다.
-5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA, UNITS)을 만든다.
+5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA, UNITS, ASK)을 만든다.
 
 작업공간의 notes/는 이렇게 나뉜다.
 
 | 위치 | 무엇 | 누가 |
 | --- | --- | --- |
-| notes/*.md, deliverables.txt | 내 기록 (계획, 결정, 데이터 해석, 단위 설명, 인수인계) | 나와 Codex |
+| notes/*.md, deliverables.txt | 내 기록 (계획, 확인 항목, 결정, 데이터 해석, 단위 설명, 인수인계) | 나와 Codex |
 | notes/from-exam/ | 시험이 준 원본 보존본 (예: AGENTS.md). 수정하지 않는다 | setup.sh |
 | notes/kit/ | 검사 도구용 기록 (제공 파일 목록, 검사 이력) | setup.sh, check.sh |
 

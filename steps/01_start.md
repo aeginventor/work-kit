@@ -6,7 +6,7 @@
 ## 할 일
 
 1. 터미널 1: `pwd && ls` → 과제 README가 보이는지 확인
-   - 안 보이면 `find . -maxdepth 3 -iname "readme*" -not -path "./.*"` 로 찾아서 그 폴더로 `cd`
+   - 안 보이면 `find . -maxdepth 3 -name "*.md" -not -path "./.*"` 로 과제 문서를 찾아서 그 폴더로 `cd`. 문서 이름이 README가 아니면 setup은 `FORCE=1 bash work-kit/setup.sh`
 2. 터미널 1:
    ```bash
    git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
@@ -25,7 +25,7 @@
 
 ```text
 AGENTS.md를 먼저 읽어. notes/AGENTS.exam.md가 있으면 읽고 지킬 환경 규칙만 3줄로 알려줘.
-그다음 과제 문서(README와 거기서 가리키는 문서)를 읽어. 데이터 파일은 열 이름과 앞 5줄만. 코드는 아직 만들지 마.
+그다음 과제 문서를 찾아 읽어: README, README가 가리키는 문서, docs/ 같은 폴더의 설명 문서. 먼저 작업공간 구조를 2단계 깊이로 보고, 이전 과제와 다를 수 있으니 실제 있는 파일만 근거로 해. 데이터 파일은 열 이름과 앞 5줄만. 코드는 아직 만들지 마.
 notes/PLAN.md에 아래를 써줘.
 1. 과제 한 줄 요약, 유형 판단(새로 만들기 / 고치기 / 기존 코드 확장 / 분석·리포트 / 성능·장애 / 설계·문서, 섞였으면 주된 것)과 이유
 2. 필수 요구: R1부터 번호를 붙여서 요구 / 문서 근거 위치 / 내가 확인할 방법. 빠짐없이. 결과를 크게 좌우하는 핵심 요구에는 ★

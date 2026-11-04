@@ -18,8 +18,8 @@ fi
 
 # 안전장치 1: 과제 README가 안 보이면 멈춘다
 if ! ls -1 | grep -qi '^readme' && [ "${FORCE:-}" != "1" ]; then
-  echo "여기($root)에 README가 없어. 과제 문서 위치를 찾아봐:"
-  find . -maxdepth 3 -iname 'readme*' -not -path './.*' -not -path "./$kit_name/*" 2>/dev/null | head -10
+  echo "여기($root)에 README가 없어. 과제 문서 후보:"
+  find . -maxdepth 3 \( -iname 'readme*' -o -iname '*.md' \) -not -path './.*' -not -path "./$kit_name/*" 2>/dev/null | head -10
   echo "그 폴더로 cd 한 뒤 다시 실행해. 여기가 맞으면: FORCE=1 bash $kit_name/setup.sh"
   exit 1
 fi
@@ -73,6 +73,11 @@ if [ ! -s notes/provided.txt ]; then
     echo "$first" > notes/provided_commit.txt
     say "제공 파일 $(wc -l < notes/provided.txt | tr -d ' ')개를 notes/provided.txt에 기록했어"
   fi
+fi
+
+# 4-0. Codex는 AGENTS.override.md가 있으면 그걸 AGENTS.md보다 우선한다. 시험이 그 파일을 줬다면 알린다
+if [ -e AGENTS.override.md ]; then
+  say "주의: AGENTS.override.md가 있어. Codex가 내 AGENTS.md보다 이걸 먼저 따른다. cat AGENTS.override.md 로 내용 확인"
 fi
 
 # 4. AGENTS.md: 시험 원본은 보존하고 내 규칙으로 교체

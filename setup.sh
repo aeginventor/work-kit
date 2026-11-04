@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # work-kit 시작 스크립트
-# 과제 루트(README.md가 있는 곳)에서 실행: bash work-kit/setup.sh
-# 하는 일: git 준비 -> work-kit을 git에서 제외 -> 초기 상태 커밋 -> 템플릿 복사
-# 이미 있는 파일은 덮어쓰지 않는다.
+# 과제 README가 보이는 위치(작업공간 루트)에서: bash work-kit/setup.sh
+# 이미 있는 기록 파일은 덮어쓰지 않는다. 두 번 실행해도 결과가 같다.
 
 set -u
 
@@ -10,89 +9,108 @@ kit_dir="$(cd "$(dirname "$0")" && pwd -P)"
 kit_name="$(basename "$kit_dir")"
 root="$(pwd -P)"
 
+say() { echo "[setup] $*"; }
+
 if [ "$kit_dir" = "$root" ]; then
-  echo "과제 루트에서 실행해줘: bash work-kit/setup.sh"
+  echo "work-kit 폴더 안이 아니라 과제 루트에서 실행해줘: bash $kit_name/setup.sh"
   exit 1
 fi
 
-# 안전장치 1: 과제 루트가 아니면 멈춘다 (README가 안 보이면 위치가 틀렸을 가능성이 크다)
+# 안전장치 1: 과제 README가 안 보이면 멈춘다
 if ! ls -1 | grep -qi '^readme' && [ "${FORCE:-}" != "1" ]; then
-  echo "여기($root)에 README가 없어. 과제 루트가 맞는지 pwd, ls로 확인해줘."
-  echo "정말 여기가 과제 루트면: FORCE=1 bash $kit_name/setup.sh"
+  echo "여기($root)에 README가 없어. 과제 문서 위치를 찾아봐:"
+  find . -maxdepth 3 -iname 'readme*' -not -path './.*' -not -path "./$kit_name/*" 2>/dev/null | head -10
+  echo "그 폴더로 cd 한 뒤 다시 실행해. 여기가 맞으면: FORCE=1 bash $kit_name/setup.sh"
   exit 1
 fi
 
-# 안전장치 2: 이미 있는 git 저장소의 하위 폴더면 멈춘다 (저장소 안에 저장소를 또 만들지 않게)
+# 안전장치 2: 다른 git 저장소의 하위 폴더면 멈춘다
 top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-if [ -n "$top" ] && [ "$top" != "$root" ]; then
-  echo "여기는 $top 저장소의 하위 폴더야. 과제 루트로 가서 다시 실행해줘: cd $top"
-  exit 1
+if [ -n "$top" ] && [ "$(cd "$top" && pwd -P)" != "$root" ]; then
+  echo "여기는 $top 저장소의 하위 폴더야. 과제 루트가 $top 이면 거기로 cd 해서 다시 실행해."
+  echo "정말 여기가 맞으면: FORCE=1 bash $kit_name/setup.sh"
+  [ "${FORCE:-}" = "1" ] || exit 1
 fi
 
-echo "== work-kit setup: $root"
+say "작업공간: $root"
 
 # 1. git 준비
 if [ ! -d .git ]; then
-  git init -q
-  echo "[git] 새 저장소를 만들었어"
+  git init -q && say "git 저장소를 새로 만들었어"
+else
+  say "기존 git 저장소를 그대로 써"
 fi
-if [ -z "$(git config user.name 2>/dev/null)" ]; then
-  git config user.name "San"
-fi
-if [ -z "$(git config user.email 2>/dev/null)" ]; then
-  git config user.email "san@example.com"
-fi
+[ -n "$(git config user.name 2>/dev/null)" ] || git config user.name "San"
+[ -n "$(git config user.email 2>/dev/null)" ] || git config user.email "san@example.com"
 
-# 2. work-kit과 흔한 빌드 산출물은 이 컴퓨터에서만 git 제외 (과제 파일은 안 건드림)
-mkdir -p .git/info
-touch .git/info/exclude
-for pattern in "$kit_name/" "node_modules/" ".venv/" "__pycache__/" ".env"; do
-  grep -qxF "$pattern" .git/info/exclude || echo "$pattern" >> .git/info/exclude
+# 2. git에서 뺄 것: work-kit, 루트의 숨김 파일(홈 디렉터리 환경 파일), 빌드 산출물, 비밀값
+mkdir -p .git/info && touch .git/info/exclude
+for pattern in "/$kit_name/" "/.*" "!/.gitignore" "!/.gitattributes" "!/.dockerignore" "!/.env.example" "!/.github/" \
+               ".env" "node_modules/" ".venv/" "venv/" "__pycache__/" ".pytest_cache/" "build/" "target/" ".gradle/"; do
+  grep -qxF -- "$pattern" .git/info/exclude || echo "$pattern" >> .git/info/exclude
 done
-echo "[git] $kit_name/ 를 git 추적에서 제외했어"
+say "git에서 제외: $kit_name/, 루트 숨김 파일(.bashrc 등), node_modules, .venv, .env 등"
 
-# 3. 커밋이 하나도 없을 때만 제공된 초기 상태를 커밋
+# 3. 처음 받은 상태 커밋 (커밋이 하나도 없을 때만)
 if ! git rev-parse HEAD >/dev/null 2>&1; then
   git add -A
   if git commit -qm "chore: 제공된 초기 상태"; then
-    echo "[git] 초기 상태 커밋 완료"
+    say "처음 받은 상태를 커밋했어"
   else
-    echo "[git] 초기 상태 커밋 실패. git status 확인 필요"
+    say "초기 커밋 실패. git status 확인 필요"
   fi
 else
-  echo "[git] 기존 커밋이 있어서 초기 커밋은 건너뜀"
+  say "기존 커밋이 있어서 초기 커밋은 건너뜀"
 fi
 
-# 4. 템플릿 복사
-for f in DECISIONS.md HANDOFF.md; do
-  if [ -e "$f" ]; then
-    echo "[skip] $f 이미 있음. 덮어쓰지 않음 (EXAM.md 1단계 참고)"
+mkdir -p notes
+
+# 처음 받은 파일 목록 (check.sh가 이 파일들이 바뀌지 않았는지 본다)
+if [ ! -s notes/provided.txt ]; then
+  first="$(git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1)"
+  if [ -n "$first" ]; then
+    git -c core.quotepath=false ls-tree -r --name-only "$first" | grep -v -x 'AGENTS.md' > notes/provided.txt
+    echo "$first" > notes/provided_commit.txt
+    say "제공 파일 $(wc -l < notes/provided.txt | tr -d ' ')개를 notes/provided.txt에 기록했어"
+  fi
+fi
+
+# 4. AGENTS.md: 시험 원본은 보존하고 내 규칙으로 교체
+if [ -e AGENTS.md ] && ! grep -q '<!-- work-kit -->' AGENTS.md; then
+  if [ ! -e notes/AGENTS.exam.md ]; then
+    cp AGENTS.md notes/AGENTS.exam.md
+    say "시험이 준 AGENTS.md를 notes/AGENTS.exam.md로 보존했어. 30초만 훑어봐: cat notes/AGENTS.exam.md"
+  fi
+  cp "$kit_dir/AGENTS.md" AGENTS.md
+  say "AGENTS.md를 내 작업 규칙으로 바꿨어"
+elif [ ! -e AGENTS.md ]; then
+  cp "$kit_dir/AGENTS.md" AGENTS.md
+  say "AGENTS.md를 만들었어"
+else
+  say "AGENTS.md는 이미 내 규칙이야. 건너뜀"
+fi
+
+# 5. 기록 양식
+for f in DECISIONS.md HANDOFF.md DATA.md; do
+  if [ -e "notes/$f" ]; then
+    say "notes/$f 이미 있음. 덮어쓰지 않음"
   else
-    cp "$kit_dir/templates/$f" "$f"
-    echo "[copy] $f"
+    cp "$kit_dir/templates/$f" "notes/$f"
+    say "notes/$f 만들었어"
   fi
 done
+[ -e notes/prompt.md ] || printf '# 여기에 긴 프롬프트를 쓰고 Codex에는 "notes/prompt.md 읽고 그대로 진행해"라고 보낸다\n\n' > notes/prompt.md
 
-if [ -e AGENTS.md ]; then
-  if grep -q "응시자 작업 규칙 (추가)" AGENTS.md; then
-    echo "[skip] AGENTS.md 에 이미 내 규칙이 있음"
-  else
-    cat "$kit_dir/templates/AGENTS.append.md" >> AGENTS.md
-    echo "[append] 기존 AGENTS.md 뒤에 내 규칙을 붙였어"
-  fi
+# 6. 준비 커밋
+git add -A
+if git diff --cached --quiet; then
+  say "새로 커밋할 변경 없음"
 else
-  cp "$kit_dir/templates/AGENTS.md" AGENTS.md
-  echo "[copy] AGENTS.md"
-fi
-
-# 5. DECISIONS.md 의 사용한 자료에 work-kit 주소 채우기
-kit_url="$(git -C "$kit_dir" remote get-url origin 2>/dev/null || echo "work-kit 공개 저장소")"
-if [ -e DECISIONS.md ] && grep -q "WORKKIT_URL" DECISIONS.md; then
-  sed -i "s#WORKKIT_URL#$kit_url#" DECISIONS.md
+  git commit -qm "chore: 작업 규칙과 기록 양식 준비 (work-kit)" && say "준비 상태를 커밋했어"
 fi
 
 echo
 echo "== 끝. 지금 상태"
-git status -s
+git status -s | head -20
 echo
-echo "다음: 에디터에서 $kit_name/EXAM.md 를 열고 1단계 체크박스부터"
+echo "다음: 에디터에서 $kit_name/steps/01_start.md 의 3번부터"

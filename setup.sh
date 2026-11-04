@@ -91,7 +91,7 @@ else
 fi
 
 # 5. 기록 양식
-for f in DECISIONS.md HANDOFF.md DATA.md; do
+for f in DECISIONS.md HANDOFF.md DATA.md UNITS.md; do
   if [ -e "notes/$f" ]; then
     say "notes/$f 이미 있음. 덮어쓰지 않음"
   else

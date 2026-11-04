@@ -40,6 +40,6 @@ git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
 2. git이 없으면 만들고, 홈 디렉터리 환경 파일(.bashrc 같은 숨김 파일)과 work-kit/을 git에서 뺀다.
 3. 처음 받은 상태를 커밋하고, 그 파일 목록을 notes/provided.txt에 남긴다. check.sh가 이 파일들이 바뀌지 않았는지 본다.
 4. 시험이 준 AGENTS.md가 있으면 notes/AGENTS.exam.md로 보존한 뒤 내 AGENTS.md로 바꾼다.
-5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA)을 만든다.
+5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA, UNITS)을 만든다.
 
 이미 있는 기록 파일은 덮어쓰지 않는다. 두 번 실행해도 결과가 같다.

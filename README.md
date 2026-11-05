@@ -39,8 +39,8 @@ git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
 1. 과제 README가 있는 위치인지, 다른 저장소의 하위 폴더는 아닌지 확인한다. 아니면 아무것도 안 하고 멈춘다.
 2. git이 없으면 만들고, 홈 디렉터리 환경 파일(.bashrc 같은 숨김 파일)과 work-kit/을 git에서 뺀다.
 3. 처음 받은 상태를 커밋하고, 그 파일 목록을 notes/kit/provided.txt에 남긴다. check.sh가 이 파일들이 바뀌지 않았는지 본다.
-4. 시험이 준 AGENTS.md가 있으면 notes/from-exam/AGENTS.md로 보존한 뒤 내 AGENTS.md로 바꾼다.
-5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA, UNITS, ASK)을 만든다.
+4. 시험이 준 AGENTS.md가 있으면 notes/from-exam/AGENTS.md로 보존하고, 내 AGENTS.md 맨 위 "시험 제공 규칙" 칸에 원본을 그대로 넣는다.
+5. notes/에 기록 양식(DECISIONS, HANDOFF, DATA, UNITS, ASK), 첫 프롬프트(prompt.md), 메모(memo.md)를 만든다.
 
 작업공간의 notes/는 이렇게 나뉜다.
 

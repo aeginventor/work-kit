@@ -18,6 +18,8 @@ python3 work-kit/tools/profile_csv.py 데이터폴더 --out notes/DATA_PROFILE.m
 | 모델·권한 확인 | `/status` |
 | 모델 바꾸기 | `/model` |
 | 새 대화 | `/new` (안 되면 종료 후 다시 `codex`). 먼저 HANDOFF 갱신 |
+| 작업 멈추기 | 선택 영역 없이 `Ctrl+C` 한 번 (두 번 누르면 Codex가 꺼진다) |
+| 꺼진 대화 이어서 | `codex resume --last` (안 되면 `codex` 새로 시작 → HANDOFF 맨 아래 "새 대화 첫 지시") |
 | 끝내기 | `/quit` |
 
 공식 안내로 확인된 건 `codex`, `/status`, `/model` 뿐이다. 나머지는 안 되면 위 괄호의 대체 방법.
@@ -26,7 +28,7 @@ python3 work-kit/tools/profile_csv.py 데이터폴더 --out notes/DATA_PROFILE.m
 
 - 시작 직후 `/status`로 모델과 추론 강도를 본다. 짧은 요청 하나로 응답 속도를 체감한다
 - 설계·알고리즘 판단은 높은 강도, 뼈대·화면·문서 같은 반복 구현은 한 단계 낮은 강도나 빠른 모드(`/fast`가 있으면, 켜졌는지 `/status`로 확인)가 낫다. 바꿀 때는 `/model`
-- 한 작업이 10분 넘게 끝나지 않으면 범위가 너무 큰 것이다. `Esc`로 멈추고 단위를 쪼개서 다시 맡긴다
+- 한 작업이 10분 넘게 끝나지 않으면 범위가 너무 큰 것이다. `Ctrl+C` 한 번으로 멈추고 단위를 쪼개서 다시 맡긴다
 - 서브에이전트(한 세션 안에서 작업을 나눠 맡기기)는 쓰지 않는다. 토큰만 쓰고 느리다
 - 모델 목록에 Astra가 보여도 쓰지 않는다 (응시 안내에서 제한)
 - 두 번째 Codex(터미널 3)는 서로 안 겹치는 일에만: 데이터 집계 스크립트, 문서 초안처럼 다른 파일만 건드리는 일. 같은 파일을 두 세션이 고치면 꼬인다
@@ -44,7 +46,7 @@ grep -rn "키워드" . --exclude-dir={node_modules,.git,.venv,work-kit}
 
 ```bash
 git status -s
-git diff --stat ; git diff           # 커밋 전에 읽기
+git diff --stat ; git diff           # 커밋 전에 읽기 (화면이 안 돌아오면 q)
 git add -A && git commit -m "종류: 무엇을 - 무엇으로 확인했나"
 git log --oneline -10
 git restore 파일                      # 커밋 안 한 변경 되돌리기

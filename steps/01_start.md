@@ -1,9 +1,9 @@
-# 01 시작 · 끝 19:08
+# 01 시작
 
 외워 둘 명령 (복사·붙여넣기가 안 될 수 있다): `git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh`
 
-시간표: 01 ~19:08 · 02 ~19:18 · 03·04 ~19:30 · 05 ~19:42 · 06 ~21:15 (20:30 점검) · 07 ~21:35 · 08 ~21:50 · 09 22:00 제출
-과제는 최대 3시간이라 19:00에 시작하면 22:00에 끝난다. 시작이 늦었으면 모든 시각을 같은 만큼 밀고, 화면의 남은 시간을 기준으로 한다.
+시간은 화면 위 "남은 시간"으로 네 번만 본다. 타이머는 '과제 시작'을 누르는 순간부터 돈다.
+**남음 2:15** 계획 끝, 구현 시작 · **1:30** 중간 점검 · **0:45** 새 기능 중단, 검증·문서 · **0:10** 제출 시작
 
 ## 할 일
 
@@ -14,30 +14,18 @@
    git clone https://github.com/aeginventor/work-kit && bash work-kit/setup.sh
    ```
    멈추면 화면 안내대로. 아예 안 되면 맨 아래 "수동 준비".
-3. 터미널 1: `codex` → `/status` 로 모델 확인 (업데이트 안내는 건너뛴다. 느리면 ref/commands.md "Codex 속도") → 아래 첫 프롬프트 보내기
-   (길어서 치기 힘들면 notes/prompt.md에 붙여 넣고 Codex에는 `notes/prompt.md 읽고 그대로 진행해`)
+3. 터미널 1: `codex` → 신뢰 확인이 뜨면 작업 폴더(README가 있는 곳)가 맞는지 보고 신뢰 → `/status` 로 모델 확인 (업데이트 안내는 건너뛴다. 느리면 ref/commands.md "Codex 속도") → 이렇게 보낸다
+   ```text
+   notes/prompt.md 읽고 그대로 진행해
+   ```
+   첫 프롬프트는 setup이 notes/prompt.md에 넣어 뒀다 (과제 문서 읽기, PLAN·R 번호·제출물·ASK 만들기). 보내기 전에 에디터로 한 번 훑어봐도 된다
+   승인 대기로 멈추면 화면의 명령을 읽고 승인 또는 거절. 기다리기만 하면 진행되지 않는다
 4. Codex가 도는 동안
    - 터미널 `+` 로 터미널 2 열기 (서버, 테스트, git diff 용)
    - 에디터 배치 (ref/keys.md 1절): 오른쪽 창 = steps 파일 고정, 왼쪽 창 = 작업 파일
-   - setup이 "AGENTS.md를 보존했어"라고 했으면 `cat notes/from-exam/AGENTS.md` 30초. Codex가 옮긴 규칙과 비교해 빠진 게 있으면 말해 준다
+   - 에디터에서 AGENTS.md 맨 위 "시험 제공 규칙"을 30초 훑는다 (setup이 시험 원본을 그대로 넣어 둠. 없었으면 "없음")
    - 데이터 파일이 있으면 터미널 2: `python3 work-kit/tools/profile_csv.py 데이터폴더 --out notes/DATA_PROFILE.md`
    - 그리고 바로 02_read.md (README를 내가 직접 읽는다)
-
-## 첫 프롬프트 (과제가 뭐든 그대로)
-
-```text
-AGENTS.md를 먼저 읽어. notes/from-exam/AGENTS.md가 있으면 읽고, 지켜야 할 규칙(환경, 금지 사항, 작업 방식)을 AGENTS.md "시험 제공 규칙" 칸에 원문 그대로 옮겨줘. 없으면 "없음". 화면에는 옮긴 줄만.
-그다음 과제 문서를 찾아 읽어: README, README가 가리키는 문서, docs/ 같은 폴더의 설명 문서. 먼저 작업공간 구조를 2단계 깊이로 보고, 이전 과제와 다를 수 있으니 실제 있는 파일만 근거로 해. 데이터 파일은 열 이름과 앞 5줄만. 코드는 아직 만들지 마.
-notes/PLAN.md에 아래를 써줘.
-1. 과제 한 줄 요약, 유형 판단(새로 만들기 / 고치기 / 기존 코드 확장 / 분석·리포트 / 성능·장애 / 설계·문서, 섞였으면 주된 것)과 이유
-2. 필수 요구: R1부터 번호를 붙여서 요구 / 문서 근거 위치 / 내가 확인할 방법. 빠짐없이. 결과를 크게 좌우하는 핵심 요구에는 ★
-3. 하지 않는 것(제외 범위)과 응시 환경 제약
-4. 제출물: 파일 이름 그대로, 정해진 양식이 있는지. 같은 파일 경로를 notes/deliverables.txt에 한 줄에 하나씩
-5. 업무 의미가 모호한 것: 담당자에게 물을 질문 후보, 결과에 미치는 영향이 큰 순서
-6. 내가 정해야 할 결정 후보: 목록만, 아직 묻지 마
-7. 담당자 확인 항목: 과제 문서가 확인하라고 한 것과 위 5번을 빠짐없이 notes/ASK.md 표로 (번호, 근거 위치, 질문 초안, 답 칸은 비워 둠)
-끝나면 화면에는 요약 5줄만.
-```
 
 ## 끝 기준
 
@@ -47,10 +35,15 @@ notes/PLAN.md에 아래를 써줘.
 
 ```bash
 [ -d .git ] || git init
+git config user.name San; git config user.email san@example.com
 printf '/work-kit/\n/.*\n!/.env.example\n.env\nnode_modules/\n.venv/\n' >> .git/info/exclude
 git add -A && git commit -m "chore: 제공된 초기 상태"
-mkdir -p notes/from-exam notes/kit && cp work-kit/templates/*.md notes/ && cp AGENTS.md notes/from-exam/ 2>/dev/null; cp work-kit/AGENTS.md .
+mkdir -p notes/from-exam notes/kit && cp work-kit/templates/*.md notes/
+[ -f AGENTS.md ] && [ ! -f notes/from-exam/AGENTS.md ] && cp AGENTS.md notes/from-exam/
+cp work-kit/AGENTS.md . && [ -f notes/from-exam/AGENTS.md ] && cat notes/from-exam/AGENTS.md >> AGENTS.md
 ```
+
+마지막 줄은 시험 원본을 AGENTS.md 맨 끝에 붙인다. 위치만 다르고 시험 규칙이 우선인 건 같다.
 
 clone 자체가 안 되면: AGENTS.md에 "판단은 내가 한다, 무거운 결정은 선택지로 묻고 기다려, 단위마다 바뀐 파일·3줄 설명·커밋 메시지 보고하고 멈춰" 세 줄만 손으로 쓰고 진행.
 

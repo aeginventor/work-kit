@@ -22,6 +22,8 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
 TIME_RE = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 BOOL_SET = {"true", "false", "y", "n", "yes", "no", "0", "1"}
+# 최소·최대는 서로 비교되는 형식끼리 따로 잰다 (숫자와 날짜 글자는 크기 비교가 안 됨)
+FAMILY = {"int": "num", "float": "num", "date": "date", "datetime": "date", "time": "time"}
 
 
 def guess_kind(value):
@@ -49,8 +51,7 @@ class Col:
         self.capped = False
         self.kinds = {}
         self.samples = []
-        self.lo = None
-        self.hi = None
+        self.ranges = {}  # FAMILY 값마다 [최소, 최대]
 
     def add(self, raw):
         v = (raw or "").strip()
@@ -66,28 +67,63 @@ class Col:
             self.samples.append(v)
         k = guess_kind(v)
         self.kinds[k] = self.kinds.get(k, 0) + 1
-        key = float(v) if k in ("int", "float") else v
-        if k in ("int", "float", "date", "datetime", "time"):
-            if self.lo is None or key < self.lo:
-                self.lo = key
-            if self.hi is None or key > self.hi:
-                self.hi = key
+        fam = FAMILY.get(k)
+        if fam:
+            key = float(v) if fam == "num" else v
+            lohi = self.ranges.setdefault(fam, [key, key])
+            if key < lohi[0]:
+                lohi[0] = key
+            if key > lohi[1]:
+                lohi[1] = key
+
+    def main_kind(self):
+        main = max(self.kinds, key=self.kinds.get)
+        if main == "int" and "float" in self.kinds:
+            main = "float"
+        return main
 
     def kind(self):
         if not self.kinds:
             return "비어 있음"
-        main = max(self.kinds, key=self.kinds.get)
-        if main == "int" and "float" in self.kinds:
-            main = "float"
+        main = self.main_kind()
         mixed = len(self.kinds) > 1 and not set(self.kinds) <= {"int", "float"}
         return main + (" (형식 섞임: " + ", ".join(sorted(self.kinds)) + ")" if mixed else "")
+
+    # 최소 ~ 최대는 그 열의 주된 형식 쪽 값으로만 보여준다
+    def _lohi(self):
+        if not self.kinds:
+            return None
+        return self.ranges.get(FAMILY.get(self.main_kind()))
+
+    @property
+    def lo(self):
+        r = self._lohi()
+        return r[0] if r else None
+
+    @property
+    def hi(self):
+        r = self._lohi()
+        return r[1] if r else None
 
     def distinct(self):
         return f">{DISTINCT_CAP}" if self.capped else str(len(self.values))
 
 
 def profile(path):
-    with open(path, encoding="utf-8-sig", newline="") as f:
+    # 엑셀에서 저장한 한글 CSV는 cp949인 경우가 많다.
+    # 안 맞는 글자가 파일 중간에 나올 수 있어서 인코딩을 바꿀 때마다 처음부터 다시 읽는다
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            return scan(path, enc)
+        except UnicodeDecodeError:
+            pass
+    r = scan(path, "utf-8-sig", errors="replace")
+    r["encoding"] = None  # 어느 쪽으로도 안 읽혀서 깨진 글자를 대신 넣고 읽음
+    return r
+
+
+def scan(path, encoding, errors="strict"):
+    with open(path, encoding=encoding, errors=errors, newline="") as f:
         reader = csv.reader(f)
         header = next(reader, [])
         cols = [Col(h.strip()) for h in header]
@@ -99,7 +135,7 @@ def profile(path):
                 bad_width += 1
             for c, v in zip(cols, row):
                 c.add(v)
-    return {"path": path, "rows": rows, "cols": cols, "bad_width": bad_width}
+    return {"path": path, "rows": rows, "cols": cols, "bad_width": bad_width, "encoding": encoding}
 
 
 def fmt(x):
@@ -109,9 +145,14 @@ def fmt(x):
 
 
 def main(argv):
+    csv.field_size_limit(2**31 - 1)  # 아주 긴 글이 든 칸도 읽는다 (기본 한도는 131072자)
     out_path = None
     if "--out" in argv:
         i = argv.index("--out")
+        if i + 1 >= len(argv):
+            print(__doc__)
+            print("--out 뒤에 저장할 파일 경로가 없어. 예: --out notes/DATA_PROFILE.md")
+            return 1
         out_path = argv[i + 1]
         argv = argv[:i] + argv[i + 2:]
     if not argv:
@@ -125,7 +166,16 @@ def main(argv):
         print("CSV 파일을 못 찾았어:", argv)
         return 1
 
-    results = [profile(f) for f in files]
+    results = []
+    failed = []  # (경로, 이유). 한 파일이 이상해도 나머지는 계속 본다
+    for f in files:
+        try:
+            results.append(profile(f))
+        except Exception as e:
+            why = f"{type(e).__name__}: {e}"
+            failed.append((f, why))
+            print(f"읽기 실패: {f} ({why})", file=sys.stderr)
+
     out = ["# 데이터 프로파일 (자동 생성, 짐작이 섞여 있음)", ""]
     out.append("| 파일 | 행 수 | 열 수 | 키 후보 |")
     out.append("| --- | --- | --- | --- |")
@@ -137,9 +187,19 @@ def main(argv):
                 keys[(r["path"].name, c.name)] = c.values
         out.append(f"| {r['path']} | {r['rows']:,} | {len(r['cols'])} | {', '.join(cand) or '없음 (여러 열을 묶어야 할 수 있음)'} |")
     out.append("")
+    if failed:
+        out.append("## 읽지 못한 파일")
+        out.append("")
+        out += [f"- {p} ({why})" for p, why in failed]
+        out.append("")
 
     for r in results:
         out.append(f"## {r['path'].name}  ({r['rows']:,}행)")
+        enc = r["encoding"]
+        if enc is None:
+            out.append("- 인코딩: 알 수 없음 (깨진 글자로 읽음, 원본 확인 필요)")
+        elif enc != "utf-8-sig":
+            out.append(f'- 인코딩: {enc} (코드에서 읽을 때 encoding="{enc}" 필요)')
         if r["bad_width"]:
             out.append(f"- 주의: 열 개수가 헤더와 다른 행 {r['bad_width']}개")
         out.append("")
@@ -196,7 +256,7 @@ def main(argv):
         print(f"저장: {out_path}  (파일 {len(results)}개)")
     else:
         print(text)
-    return 0
+    return 0 if results else 1
 
 
 if __name__ == "__main__":

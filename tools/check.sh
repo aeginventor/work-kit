@@ -52,7 +52,11 @@ if [ -s notes/kit/provided.txt ] && [ -s notes/kit/provided_commit.txt ]; then
     elif ! git diff --quiet "$base" -- "$f" 2>/dev/null; then changed+=("$f"); fi
   done < notes/kit/provided.txt
   if [ ${#changed[@]} -eq 0 ]; then ok "제공 파일 그대로 ($(wc -l < notes/kit/provided.txt | tr -d ' ')개)"
-  else bad "제공 파일이 바뀜: ${changed[*]:0:5}  (되돌리기: git checkout $base -- 파일)"; fi
+  else
+    bad "제공 파일이 바뀜: ${changed[*]:0:5}"
+    lines+=("      내가 채우라고 받은 양식 파일이면 정상이다 → notes/deliverables.txt 에 그 파일 이름을 한 줄 추가")
+    lines+=("      과제 문서나 제공 데이터를 실수로 고친 거면 그때만 되돌린다: git checkout $base -- 파일이름")
+  fi
 else
   wn "notes/kit/provided.txt 없음. setup.sh를 돌렸는지 확인"
 fi
@@ -71,7 +75,25 @@ fi
 
 # 3. 비밀값
 if git ls-files | grep -qE '(^|/)\.env$'; then bad ".env 파일이 git에 들어가 있음 (git rm --cached .env)"; fi
-hits="$(git grep --untracked -niIE '(api[_-]?key|secret|passw(or)?d|token)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"'][^"'"'"'$<{ ]{6,}' -- . ':!work-kit' ':!*.example' ':!notes/*' ':!*.md' 2>/dev/null | head -5)"
+quote="[\"']"                                     # " 또는 '
+value="[^\"'\$<{[:space:]][^\"'[:space:]]{5,}"     # 6글자 이상. $ < { 로 시작하면 자리표시(${X}, <키>)라 뺀다
+skip=(':!work-kit' ':!*.example' ':!notes/*' ':!*.md')
+hits="$({
+  # a. SECRET_KEY = "abcd1234", "db.password": "..."
+  #    타입이 붙은 설정도: secret_key: str = "changeme1"
+  git grep --untracked -nIiE "(api[_.-]?key|secret|passw(or)?d|token|access[_.-]?key|private[_.-]?key)[A-Za-z0-9_.-]*${quote}?([[:space:]]*:[[:space:]]*[A-Za-z][A-Za-z0-9_.]*)?[[:space:]]*[:=][[:space:]]*${quote}${value}" -- . "${skip[@]}"
+  # b. 환경변수 기본값: os.getenv("API_KEY", "dev-secret-123")
+  git grep --untracked -nIE "${quote}[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Z0-9_]*${quote}[[:space:]]*,[[:space:]]*${quote}${value}" -- . "${skip[@]}"
+  #    JS 기본값: process.env.JWT_SECRET || "secret123"
+  git grep --untracked -nIE "[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Z0-9_]*[[:space:]]*(\\|\\||\\?\\?)[[:space:]]*${quote}${value}" -- . "${skip[@]}"
+  # c. 스프링 기본값: @Value("${jwt.secret:mydefaultsecret}")
+  git grep --untracked -nIiE '[$][{][A-Za-z0-9_.-]*(secret|password|token|key)[A-Za-z0-9_.-]*:[^{}$[:space:]]{6,}[}]' -- . "${skip[@]}"
+  # d. 설정 파일의 따옴표 없는 값: jwt.secret=abcdef123 (password=${DB_PASSWORD} 는 아님)
+  git grep --untracked -nIiE "(secret|passw(or)?d|token|api[_.-]?key|access[_.-]?key)[A-Za-z0-9_.-]*[[:space:]]*[:=][[:space:]]*[^\"'\$<{#[:space:]][^[:space:]]{5,}" \
+    -- '*.properties' '*.yml' '*.yaml' '*.toml' '*.ini' '*.cfg' '*.conf' "${skip[@]}"
+} 2>/dev/null | awk '!seen[$0]++' \
+  | grep -vE "[:=,|?][[:space:]]*[\"']?https?://" \
+  | grep -vE "[:=][[:space:]]*[0-9]+[[:space:]]*,?[[:space:]]*(#.*)?$" | head -8)"   # URL, 따옴표 없는 숫자(만료 시간 등)는 뺀다
 if [ -n "$hits" ]; then
   wn "비밀값처럼 보이는 줄 (진짜 값이면 환경변수로):"
   while IFS= read -r h; do lines+=("      $h"); done <<< "$hits"
@@ -88,9 +110,24 @@ elif [ -d tests ] || ls test_*.py >/dev/null 2>&1; then
   if [ -x .venv/bin/python ]; then test_cmd=".venv/bin/python -m pytest -q"; else test_cmd="python3 -m pytest -q"; fi
 fi
 n_checks=0
-if [ -n "$test_cmd" ]; then
+if [ "$test_cmd" = "npm test --silent" ] && grep -q 'no test specified' package.json 2>/dev/null; then
+  wn "package.json의 test 스크립트가 기본값(no test specified). 실제 테스트 명령을 notes/test_cmd.txt에 한 줄로"
+elif [ -n "$test_cmd" ]; then
   n_checks=$((n_checks+1))
-  if run_quiet "테스트: $test_cmd" bash -c "$test_cmd"; then ok "테스트 통과: $test_cmd"; else bad "테스트 실패: $test_cmd"; fi
+  test_out="$(bash -c "$test_cmd" 2>&1)"; test_code=$?
+  echo "---- 테스트: $test_cmd (exit $test_code)"; echo "$test_out" | tail -15
+  if [ $test_code -eq 0 ]; then ok "테스트 통과: $test_cmd"
+  elif echo "$test_out" | grep -qiE "No module named pytest|command not found|not found: (npm|gradle|mvn|go)"; then
+    bad "테스트 도구가 설치돼 있지 않음: $test_cmd (예: pip install pytest). 설치 후 다시"
+  else bad "테스트 실패: $test_cmd"; fi
+else
+  # 루트에는 없지만 backend/ 같은 하위 폴더에 테스트가 있는 경우
+  sub_test="$(find . -maxdepth 4 \( -path ./work-kit -o -path ./.git -o -name node_modules -o -name .venv \) -prune -o -type f \
+    \( -name 'test_*.py' -o -name '*_test.py' -o -name '*.test.js' -o -name '*.test.ts' -o -name '*.spec.ts' -o -name '*Test.java' -o -name '*_test.go' \) \
+    -print 2>/dev/null | LC_ALL=C sort | head -1)"
+  if [ -n "$sub_test" ]; then
+    wn "루트에서 테스트 실행 방법을 못 찾았는데 하위 폴더에 테스트 파일이 있음 (예: ${sub_test#./}). notes/test_cmd.txt에 실행 명령을 한 줄로 (예: cd backend && python3 -m pytest -q)"
+  fi
 fi
 
 # 5. 과제 고유 검증 checks/
@@ -115,16 +152,19 @@ if [ "$n_checks" -eq 0 ]; then
 fi
 
 # 5-1. 요구 번호(R1, R2 …)마다 검증이 있는가: tests/, checks/ 의 파일 이름이나 내용에 R 번호가 있는지
+#      대문자 R만 센다. 앞에 영문·숫자가 붙거나 뒤에 숫자가 붙으면 다른 것으로 본다
+#      (test_R2_total, # R2:, R2_check.sh 는 R2. user4.json, R20, PR2 는 R2·R4가 아님)
 if [ -s notes/PLAN.md ]; then
-  reqs="$(grep -owE 'R[0-9]+' notes/PLAN.md | sort -u | tr '\n' ' ')"
+  reqs="$(LC_ALL=C grep -oE '(^|[^A-Za-z0-9])R[0-9]+' notes/PLAN.md | LC_ALL=C grep -oE 'R[0-9]+' | sort -uV | tr '\n' ' ')"
   if [ -n "$reqs" ]; then
     uncovered=()
     for r in $reqs; do
+      re="(^|[^A-Za-z0-9])$r([^0-9]|\$)"
       found=""
       for d in tests checks; do
         [ -d "$d" ] || continue
-        if find "$d" -type f -iname "*${r}[_.-]*" 2>/dev/null | grep -q . \
-           || grep -rqwi -- "$r" "$d" 2>/dev/null; then found=1; break; fi
+        if find "$d" \( -name __pycache__ -o -name .pytest_cache \) -prune -o -type f -print 2>/dev/null | LC_ALL=C grep -qE "$re" \
+           || LC_ALL=C grep -rqIE --exclude-dir=__pycache__ --exclude-dir=.pytest_cache -- "$re" "$d" 2>/dev/null; then found=1; break; fi
       done
       [ -n "$found" ] || uncovered+=("$r")
     done

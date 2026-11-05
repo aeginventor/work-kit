@@ -20,7 +20,9 @@ fi
 if ! ls -1 | grep -qi '^readme' && [ "${FORCE:-}" != "1" ]; then
   echo "여기($root)에 README가 없어. 과제 문서 후보:"
   find . -maxdepth 3 \( -iname 'readme*' -o -iname '*.md' \) -not -path './.*' -not -path "./$kit_name/*" 2>/dev/null | head -10
-  echo "그 폴더로 cd 한 뒤 다시 실행해. 여기가 맞으면: FORCE=1 bash $kit_name/setup.sh"
+  echo "README가 있는 폴더가 과제 루트다. 그 폴더로 work-kit을 옮겨서 다시 (폴더 이름은 위 목록에서):"
+  echo "  cd 그폴더 && mv \"$kit_dir\" . && bash $kit_name/setup.sh"
+  echo "여기가 맞으면: FORCE=1 bash $kit_name/setup.sh"
   exit 1
 fi
 
@@ -80,17 +82,30 @@ if [ -e AGENTS.override.md ]; then
   say "주의: AGENTS.override.md가 있어. Codex가 내 AGENTS.md보다 이걸 먼저 따른다. cat AGENTS.override.md 로 내용 확인"
 fi
 
-# 4. AGENTS.md: 시험 원본은 보존하고 내 규칙으로 교체
+# 4. AGENTS.md: 시험 원본은 보존하고, 내 규칙의 "시험 제공 규칙" 칸에 원본을 그대로 넣는다
+make_agents() {  # $1: 시험 원본 경로 (없으면 빈 값)
+  local src="$1" tmp
+  tmp="$(mktemp)"
+  awk -v src="$src" '
+    index($0, "(시험 제공 규칙 자리)") {
+      if (src == "") { print "- 없음 (시험이 준 AGENTS.md가 없었다)"; next }
+      print "<!-- 시험 원본 시작: notes/from-exam/AGENTS.md 그대로. 제목만 두 단계 내림 -->"
+      while ((getline line < src) > 0) { sub(/\r$/, "", line); if (line ~ /^#/) line = "##" line; print line }
+      print "<!-- 시험 원본 끝 -->"
+      next
+    }
+    { print }' "$kit_dir/AGENTS.md" > "$tmp" && mv "$tmp" AGENTS.md
+}
 if [ -e AGENTS.md ] && ! grep -q '<!-- work-kit -->' AGENTS.md; then
   if [ ! -e notes/from-exam/AGENTS.md ]; then
     mkdir -p notes/from-exam
     cp AGENTS.md notes/from-exam/AGENTS.md
-    say "시험이 준 AGENTS.md를 notes/from-exam/AGENTS.md로 보존했어. 30초만 훑어봐: cat notes/from-exam/AGENTS.md"
+    say "시험이 준 AGENTS.md를 notes/from-exam/AGENTS.md로 보존했어"
   fi
-  cp "$kit_dir/AGENTS.md" AGENTS.md
-  say "AGENTS.md를 내 작업 규칙으로 바꿨어"
+  make_agents notes/from-exam/AGENTS.md
+  say "AGENTS.md를 내 작업 규칙으로 바꾸고, 맨 위 '시험 제공 규칙' 칸에 시험 원본을 그대로 넣었어 (시험 규칙이 우선)"
 elif [ ! -e AGENTS.md ]; then
-  cp "$kit_dir/AGENTS.md" AGENTS.md
+  if [ -e notes/from-exam/AGENTS.md ]; then make_agents notes/from-exam/AGENTS.md; else make_agents ""; fi
   say "AGENTS.md를 만들었어"
 else
   say "AGENTS.md는 이미 내 규칙이야. 건너뜀"
@@ -105,7 +120,11 @@ for f in DECISIONS.md HANDOFF.md DATA.md UNITS.md ASK.md; do
     say "notes/$f 만들었어"
   fi
 done
-[ -e notes/prompt.md ] || printf '# 여기에 긴 프롬프트를 쓰고 Codex에는 "notes/prompt.md 읽고 그대로 진행해"라고 보낸다\n\n' > notes/prompt.md
+if [ ! -e notes/prompt.md ]; then
+  cp "$kit_dir/templates/prompt.md" notes/prompt.md
+  say "notes/prompt.md에 첫 프롬프트를 넣어 뒀어"
+fi
+[ -e notes/memo.md ] || printf '# 메모 (내 메모. 떠오른 질문, 확인할 것)\n\n' > notes/memo.md
 
 # 6. 준비 커밋
 git add -A
